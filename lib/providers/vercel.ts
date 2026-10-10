@@ -17,13 +17,13 @@ export const vercel: Provider = {
   id: "vercel",
   name: "Vercel",
   blurb: "Creates a Vercel project for each repo and deploys it to production.",
-  envVars: ["VERCEL_INTEGRATION_SLUG", "VERCEL_CLIENT_ID", "VERCEL_CLIENT_SECRET"],
+  envVars: ["VC_INTEGRATION_SLUG", "VC_CLIENT_ID", "VC_CLIENT_SECRET"],
   usesPkce: false,
   configured: () =>
-    Boolean(process.env.VERCEL_INTEGRATION_SLUG && process.env.VERCEL_CLIENT_ID && process.env.VERCEL_CLIENT_SECRET),
+    Boolean(process.env.VC_INTEGRATION_SLUG && process.env.VC_CLIENT_ID && process.env.VC_CLIENT_SECRET),
 
   authorizeUrl({ state }) {
-    const url = new URL(`https://vercel.com/integrations/${process.env.VERCEL_INTEGRATION_SLUG}/new`);
+    const url = new URL(`https://vercel.com/integrations/${process.env.VC_INTEGRATION_SLUG}/new`);
     url.searchParams.set("state", state);
     return url.toString();
   },
@@ -33,8 +33,8 @@ export const vercel: Provider = {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.VERCEL_CLIENT_ID ?? "",
-        client_secret: process.env.VERCEL_CLIENT_SECRET ?? "",
+        client_id: process.env.VC_CLIENT_ID ?? "",
+        client_secret: process.env.VC_CLIENT_SECRET ?? "",
         code,
         redirect_uri: redirectUri,
       }),
