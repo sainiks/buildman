@@ -1,0 +1,17 @@
+node_modules
+.next
+.vercel
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+.env*
+!.env.example
+*.zip
+*.log
+coverage
+.idea
+.vscode
+bun.lockb

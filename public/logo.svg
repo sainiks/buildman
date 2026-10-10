@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Buildman">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b7bff"/>
+      <stop offset="1" stop-color="#ff5c8f"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 4l24 13.6v28.8L32 60 8 46.4V17.6z" fill="url(#g)"/>
+  <path d="M32 4l24 13.6L32 31.2 8 17.6z" fill="#fff" opacity=".28"/>
+  <path d="M32 31.2V60L8 46.4V17.6z" fill="#07060d" opacity=".22"/>
+  <path d="M32 31.2l24-13.6" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
+</svg>

@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          # Dummy values: the build never talks to a real service.
+          APP_URL: http://localhost:3000
+          SESSION_SECRET: ci-only-ci-only-ci-only-ci-only-ci
+          ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          GITMAN_SUPABASE_URL: http://localhost:54321
+          GITMAN_SUPABASE_SERVICE_KEY: ci

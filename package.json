@@ -1,0 +1,31 @@
+{
+  "name": "buildman",
+  "version": "0.1.0",
+  "description": "Drop a project, get a GitHub repo, a Vercel site and a Supabase database, plus a traffic dashboard.",
+  "private": true,
+  "license": "MIT",
+  "author": "Kunal Saini (https://github.com/sainiks)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "jose": "^5.10.0",
+    "jszip": "^3.10.1",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}
