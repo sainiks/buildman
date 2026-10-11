@@ -11,6 +11,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Max-Age": "86400",
+  "Access-Control-Expose-Headers": "X-Buildman",
 };
 
 const KEY_RE = /^pk_[a-z0-9]{24}$/;
@@ -59,24 +60,25 @@ export function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  const quiet = () => new Response(null, { status: 204, headers: CORS });
+  // The X-Buildman header says why a hit was or wasn't stored; t.js shows it in ?buildman_debug=1 mode.
+  const quiet = (reason = "skipped") => new Response(null, { status: 204, headers: { ...CORS, "X-Buildman": reason } });
   try {
     const ua = req.headers.get("user-agent") ?? "";
-    if (BOT_RE.test(ua)) return quiet();
+    if (BOT_RE.test(ua)) return quiet("bot-user-agent");
 
     const body = JSON.parse((await req.text()).slice(0, 4000)) as Record<string, unknown>;
     const key = typeof body.k === "string" ? body.k : "";
-    if (!KEY_RE.test(key)) return quiet();
+    if (!KEY_RE.test(key)) return quiet("bad-key-format");
 
     const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "0";
-    if (limited(`${key}:${ip}`)) return quiet();
+    if (limited(`${key}:${ip}`)) return quiet("rate-limited");
 
     const projectId = await projectIdFor(key);
-    if (!projectId) return quiet();
+    if (!projectId) return quiet("unknown-project-key");
 
     const type = body.t === "event" ? "event" : "pageview";
     const name = type === "event" ? clip(body.n, 60)?.replace(/[^\w:. -]/g, "") || null : null;
-    if (type === "event" && !name) return quiet();
+    if (type === "event" && !name) return quiet("empty-event-name");
 
     const path = (clip(body.p, 200) ?? "/").split(/[?#]/)[0] || "/";
     const pageHost = clip(body.h, 200)?.toLowerCase() ?? null;
@@ -105,7 +107,11 @@ export async function POST(req: Request) {
       device: device(ua, width),
       visitor,
     });
-    if (error) console.error("[collect] insert failed:", error.message);
+    if (error) {
+      console.error("[collect] insert failed:", error.message);
+      return quiet("database-error");
+    }
+    return quiet("counted");
   } catch (e) {
     console.error("[collect] error:", e instanceof Error ? e.message : e);
     // Never surface errors to a visitor's browser.
