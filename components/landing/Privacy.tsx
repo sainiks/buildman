@@ -24,7 +24,7 @@ export default function Privacy() {
             <small>Same visitor, a new ID every day. No cookies, no stored IPs.</small>
           </div>
         </Win>
-        <figcaption><b>Analytics without cookies.</b> Do Not Track is respected.</figcaption>
+        <figcaption><b>Analytics without cookies.</b> No IPs stored, and site owners choose whether Do Not Track is honored.</figcaption>
       </figure>
 
       <figure className="pv">

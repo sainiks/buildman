@@ -142,7 +142,7 @@ export default async function ProjectPage({
         </div>
         {!last && (
           <ul className="sub small" style={{ marginTop: 12, paddingLeft: 18 }}>
-            <li>Open your live site in a normal tab. Browsers with Do Not Track on (Brave, Firefox private) are not counted.</li>
+            <li>Open your live site in a normal tab. Ad blockers and some privacy browsers can still block the script.</li>
             <li>Right-click → View Source on the live site and search for <code>t.js</code>. If it points to localhost, press Reinstall.</li>
             <li>Ad blockers can hide tracking scripts. Try a private window with extensions off.</li>
           </ul>

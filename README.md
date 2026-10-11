@@ -110,7 +110,7 @@ The browser drives the steps and polling, and each API route is one short call, 
 The tag loads `/t.js` from Buildman, which posts to `/api/collect`. By design:
 
 - **No cookies, no stored IPs.** A visitor is a hash of IP + user agent + project + the current UTC date, with a secret salt, so it cannot be linked across days. A returning person counts once per day.
-- Honors **Do Not Track**; ignores common bots; rate-limited per IP and project.
+- No cookies, no stored IPs. Generated tags set `data-dnt="ignore"` so visits from browsers sending Do Not Track are still counted; delete that attribute from the tag to honor Do Not Track instead. Ignores common bots; rate-limited per IP and project.
 - Single-page apps are handled (route changes count). Outbound link clicks are recorded as `outbound:<host>`. Custom events: `window.buildman.track("signup")` or `data-buildman-event="buy"` on an element.
 - The project key in the tag (`pk_…`) is public by nature, so anyone who copies it can send fake events to that project. This is the same trade-off as any client-side analytics.
 

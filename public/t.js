@@ -1,5 +1,6 @@
-/*! Buildman tracker. No cookies, no stored IPs. Honors Do Not Track.
+/*! Buildman tracker. No cookies, no stored IPs. Honors Do Not Track unless the tag says data-dnt="ignore".
  *  <script defer src="https://YOUR-GITMAN/t.js" data-key="pk_..."></script>
+ *  Buildman tags include data-dnt="ignore" (count visitors whose browser sends Do Not Track); remove it to honor DNT.
  *  Custom events:   window.buildman.track("signup")
  *  Click events:    <button data-buildman-event="buy">Buy</button>
  */
@@ -24,7 +25,9 @@
       el.textContent = "Buildman: " + text;
     } catch (e) {}
   }
-  if (navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.msDoNotTrack === "1") {
+  // Site owners can opt out of honoring Do Not Track on their own site: data-dnt="ignore" on the script tag.
+  var ignoreDnt = script.getAttribute("data-dnt") === "ignore";
+  if (!ignoreDnt && (navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.msDoNotTrack === "1")) {
     toast("not counted: this browser has Do Not Track turned on", true);
     return;
   }

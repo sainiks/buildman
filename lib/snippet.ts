@@ -17,7 +17,9 @@ export interface SnippetResult {
 }
 
 export function snippetTag(scriptUrl: string, publicKey: string): string {
-  return `<script defer src="${scriptUrl}" data-key="${publicKey}"></script>`;
+  // data-dnt="ignore": count every visit, including browsers that send Do Not Track (e.g. Chrome on
+  // phones with it switched on). The tracker still stores no cookies and no IPs.
+  return `<script defer src="${scriptUrl}" data-key="${publicKey}" data-dnt="ignore"></script>`;
 }
 
 interface Target {
