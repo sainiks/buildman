@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { detect, TEXT_KEYS, type Plan } from "@/lib/detect";
 import { parseDotenv } from "@/lib/dotenv";
 import { decodeText, formatBytes, ingestFiles, ingestZip, readDrop, type Ingested, type PathedFile } from "@/lib/files";
-import { ship, type Options, type Result, type Step, type StepId } from "@/lib/pipeline";
+import { ship, type Host, type Options, type Result, type Step, type StepId } from "@/lib/pipeline";
 import { slugify } from "@/lib/slug";
 
 type Stage = "pick" | "review" | "run";
@@ -13,22 +13,23 @@ interface Connected {
   github: boolean;
   vercel: boolean;
   supabase: boolean;
+  netlify: boolean;
 }
 
-type Wanted = "vercel" | "supabase";
-const NAMES: Record<Wanted, string> = { vercel: "Vercel", supabase: "Supabase" };
+type Wanted = "vercel" | "supabase" | "netlify";
+const NAMES: Record<Wanted, string> = { vercel: "Vercel", supabase: "Supabase", netlify: "Netlify" };
 
 const ENV_FILES =[".env", ".env.local", ".env.production"]; // later wins
-const SKIP_ENV = /^(VERCEL|NODE_ENV$|NEXT_RUNTIME)/;
+const SKIP_ENV = /^(VERCEL|NETLIFY|NODE_ENV$|NEXT_RUNTIME)/;
 const LOCAL_VALUE = /localhost|127\.0\.0\.1|0\.0\.0\.0/;
 
-function initialSteps(): Step[] {
+function initialSteps(host: Host = "vercel"): Step[] {
   return [
     { id: "repo", label: "Create GitHub repo", state: "pending" },
     { id: "upload", label: "Upload files", state: "pending" },
     { id: "commit", label: "Commit to main", state: "pending" },
     { id: "db", label: "Supabase database", state: "pending" },
-    { id: "vercel", label: "Create Vercel project", state: "pending" },
+    { id: "vercel", label: `Create ${host === "netlify" ? "Netlify site" : "Vercel project"}`, state: "pending" },
     { id: "deploy", label: "Deploy to production", state: "pending" },
   ];
 }
@@ -44,6 +45,7 @@ export default function Ship({ initial }: { initial: Connected }) {
   const [envNotes, setEnvNotes] = useState<string[]>([]);
   const [opts, setOpts] = useState<Options>({
     name: "",
+    host: initial.vercel || !initial.netlify ? "vercel" : "netlify",
     isPrivate: true,
     deploy: true,
     createDb: true,
@@ -76,7 +78,7 @@ export default function Ship({ initial }: { initial: Connected }) {
     const res = await fetch("/api/connections");
     if (!res.ok) return;
     const data = (await res.json()) as { providers: { id: keyof Connected; connection: unknown }[] };
-    const next = { github: false, vercel: false, supabase: false };
+    const next = { github: false, vercel: false, supabase: false, netlify: false };
     for (const p of data.providers) next[p.id] = Boolean(p.connection);
     setConnected(next);
     return next;
@@ -156,7 +158,7 @@ export default function Ship({ initial }: { initial: Connected }) {
     }
     const notes: string[] = [];
     if (skippedLocal) notes.push(`${skippedLocal} env var(s) pointing to localhost were left out.`);
-    if (data.entries.some((e) => e.secret)) notes.push("Local .env files are not pushed to GitHub. Their values go to Vercel instead.");
+    if (data.entries.some((e) => e.secret)) notes.push("Local .env files are not pushed to GitHub. Their values go to your host (Vercel or Netlify) instead.");
 
     setIngested(data);
     setPlan(nextPlan);
@@ -208,9 +210,9 @@ export default function Ship({ initial }: { initial: Connected }) {
     setShowPass(false);
   }
 
-  const needsVercel = opts.deploy;
+  const needsHost = opts.deploy;
   const needsSupabase = Boolean(plan?.needsDb && opts.createDb);
-  const missingIds = ([needsVercel && !connected.vercel && "vercel", needsSupabase && !connected.supabase && "supabase"].filter(Boolean)) as Wanted[];
+  const missingIds = ([needsHost && !connected[opts.host] && opts.host, needsSupabase && !connected.supabase && "supabase"].filter(Boolean)) as Wanted[];
 
   async function start() {
     if (!ingested || !plan) return;
@@ -218,7 +220,7 @@ export default function Ship({ initial }: { initial: Connected }) {
     setRunning(true);
     setFinished(false);
     setError(null);
-    setSteps(initialSteps());
+    setSteps(initialSteps(opts.host));
     const fresh: Result = { notes: [] };
     setResult(fresh);
 
@@ -319,7 +321,7 @@ export default function Ship({ initial }: { initial: Connected }) {
       {stage === "review" && plan && ingested && (
         <div className="card">
           <label className="field">
-            <span>Project name (used for GitHub, Vercel and Supabase)</span>
+            <span>Project name (used for GitHub, your host and Supabase)</span>
             <input
               type="text"
               value={opts.name}
@@ -354,8 +356,25 @@ export default function Ship({ initial }: { initial: Connected }) {
             </label>
             <label className="toggle">
               <input type="checkbox" checked={opts.deploy} onChange={(e) => setOpts({ ...opts, deploy: e.target.checked })} />
-              <span>Deploy to Vercel</span>
+              <span>Deploy to {NAMES[opts.host]}</span>
             </label>
+            {opts.deploy && (
+              <div className="seg" role="radiogroup" aria-label="Host">
+                {(["vercel", "netlify"] as const).map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    role="radio"
+                    aria-checked={opts.host === h}
+                    className={opts.host === h ? "on" : undefined}
+                    onClick={() => setOpts({ ...opts, host: h })}
+                  >
+                    {NAMES[h]}
+                    {connected[h] ? "" : " (not connected)"}
+                  </button>
+                ))}
+              </div>
+            )}
             <label className="toggle">
               <input type="checkbox" checked={opts.tracking} onChange={(e) => setOpts({ ...opts, tracking: e.target.checked })} />
               <span>
@@ -369,7 +388,7 @@ export default function Ship({ initial }: { initial: Connected }) {
                   <input type="checkbox" checked={opts.createDb} onChange={(e) => setOpts({ ...opts, createDb: e.target.checked })} />
                   <span>
                     Create a Supabase project
-                    <small>Region {opts.region}. Its keys are added to Vercel automatically.</small>
+                    <small>Region {opts.region}. Its keys are added to {NAMES[opts.host]} automatically.</small>
                   </span>
                 </label>
                 {plan.migrations.length > 0 && (
@@ -453,7 +472,7 @@ export default function Ship({ initial }: { initial: Connected }) {
                 )}
                 {result.inspectorUrl && (
                   <a className="btn" href={result.inspectorUrl} target="_blank" rel="noreferrer">
-                    Vercel deployment <small>build logs</small>
+                    {NAMES[opts.host]} deployment <small>build logs</small>
                   </a>
                 )}
                 {result.supabaseRef && (

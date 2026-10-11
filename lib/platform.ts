@@ -2,6 +2,7 @@ import { credentials } from "./connections";
 import type { ProjectRow } from "./db";
 import { repoActivity, type RepoActivity } from "./github";
 import { apiUsage, type ApiUsage } from "./supabase";
+import { listNetlifyDeploys } from "./netlify";
 import { listDeployments, vercelAuth, type DeploymentSummary } from "./vercel";
 
 export type Panel<T> = { status: "ok"; data: T } | { status: "error"; message: string } | { status: "na"; message: string };
@@ -23,9 +24,11 @@ export interface PlatformStats {
 /** What each connected service says about a project. Every panel fails on its own. */
 export async function platformStats(userId: string, p: ProjectRow): Promise<PlatformStats> {
   const [vercel, supabase, github] = await Promise.all([
-    p.vercel_project_id
+    p.netlify_site_id
+      ? guard(async () => listNetlifyDeploys((await credentials(userId, "netlify")).token, p.netlify_site_id!, 5))
+      : p.vercel_project_id
       ? guard(async () => listDeployments(vercelAuth(await credentials(userId, "vercel")), p.vercel_project_id!, 5))
-      : Promise.resolve<Panel<DeploymentSummary[]>>({ status: "na", message: "This project isn't deployed on Vercel." }),
+      : Promise.resolve<Panel<DeploymentSummary[]>>({ status: "na", message: "This project isn't deployed on a host yet." }),
     p.supabase_ref
       ? guard(async () => apiUsage((await credentials(userId, "supabase")).token, p.supabase_ref!))
       : Promise.resolve<Panel<ApiUsage>>({ status: "na", message: "This project has no Supabase database." }),

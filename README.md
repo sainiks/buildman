@@ -41,6 +41,7 @@ What *you*, the operator, do once per service is register Buildman as an app and
 | GitHub | An **OAuth App** | Doubles as the sign-in method |
 | Vercel | An **Integration** | Vercel's route for third-party apps to act on a user's account; the token is long-lived and may be tied to a team |
 | Supabase | An **OAuth App** (organization settings) | Uses PKCE; access tokens are refreshed automatically |
+| Netlify (optional) | An **OAuth App** (user settings) | Alternative host. Tokens don't expire. Netlify's API has no one-call GitHub link, so Buildman adds a read-only deploy key and a push webhook to the repo |
 
 ## Setup
 
@@ -60,6 +61,9 @@ Redirect URL: `<APP_URL>/api/oauth/vercel/callback`. Grant read/write on **Proje
 
 **Supabase OAuth App**: Supabase → Organization settings → OAuth Apps → Add application.
 Redirect URI: `<APP_URL>/api/oauth/supabase/callback`. Scopes are chosen when the app is created; enable the ones covering projects, database, organizations, analytics and API keys.
+
+**Netlify OAuth App** (optional): Netlify → User settings → Applications → OAuth applications → New.
+Redirect URI: `<APP_URL>/api/oauth/netlify/callback`. Put the client id and secret in `NETLIFY_CLIENT_ID` and `NETLIFY_CLIENT_SECRET`. Then run [`supabase/migrations/002_netlify.sql`](supabase/migrations/002_netlify.sql) once in Buildman's own Supabase project so projects can record which host they use. Netlify's documentation for the OAuth code exchange is thin, so treat this plugin as best-effort and test it with a real Netlify account.
 
 ### 3. Configure and run
 

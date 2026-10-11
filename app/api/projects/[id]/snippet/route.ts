@@ -10,7 +10,7 @@ import { SNIPPET_TARGETS, refreshTag } from "@/lib/snippet";
 export const maxDuration = 60;
 
 // Rewrites the tracking tag inside the project's GitHub repo so it points at this deployment
-// (fixes tags saved while running on localhost). The commit triggers Vercel's auto-redeploy.
+// (fixes tags saved while running on localhost). The commit triggers the host's auto-redeploy.
 export const POST = handle(async (req) => {
   const userId = await requireUserId();
   const id = new URL(req.url).pathname.split("/").slice(-2)[0];
@@ -36,7 +36,7 @@ export const POST = handle(async (req) => {
       }
       await writeRepoFile(token, project.repo_full_name, path, project.branch, next, file.sha, "Update Buildman tracking tag");
       await updateProject(userId, project.id, { snippet_installed: true });
-      return { ok: true, path, message: `Updated ${path}. Vercel will redeploy in a minute.` };
+      return { ok: true, path, message: `Updated ${path}. Your host will redeploy in a minute.` };
     }
   }
   if (touched) return { ok: true, path: touched, message: "The tag in your repo is already correct. If no visits show up, check the checklist below." };

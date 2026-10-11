@@ -58,7 +58,7 @@ export function RouteTrack({ project }: { project: ProjectRow }) {
   const stops: { label: string; done: boolean; fail?: boolean }[] = [
     { label: "Repo", done: Boolean(project.repo_url) },
     ...(project.supabase_ref ? [{ label: "Database", done: true }] : []),
-    { label: "Deploy", done: Boolean(project.vercel_project_id) },
+    { label: "Deploy", done: Boolean(project.vercel_project_id || project.netlify_site_id) },
     { label: project.status === "failed" ? "Build failed" : "Live", done: project.status === "live", fail: project.status === "failed" },
   ];
   return (

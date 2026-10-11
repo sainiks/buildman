@@ -1,4 +1,4 @@
-export type ProviderId = "github" | "vercel" | "supabase";
+export type ProviderId = "github" | "vercel" | "supabase" | "netlify";
 
 export interface TokenSet {
   accessToken: string;

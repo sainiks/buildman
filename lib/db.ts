@@ -35,6 +35,10 @@ export interface ProjectRow {
   branch: string | null;
   vercel_project_id: string | null;
   vercel_project_name: string | null;
+  /** Where it is deployed. Older rows (before Netlify support) are "vercel". */
+  host?: "vercel" | "netlify" | null;
+  netlify_site_id?: string | null;
+  netlify_site_name?: string | null;
   live_url: string | null;
   supabase_ref: string | null;
   snippet_installed: boolean;

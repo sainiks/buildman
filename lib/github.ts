@@ -196,3 +196,21 @@ export async function writeRepoFile(token: string, fullName: string, path: strin
     body: JSON.stringify({ message, content: Buffer.from(text, "utf8").toString("base64"), sha, branch }),
   });
 }
+
+/** Adds a read-only deploy key to the repo (Netlify uses it to clone). Needs admin on the repo. */
+export async function addDeployKey(token: string, fullName: string, title: string, key: string) {
+  const k = await gh<{ id: number }>(token, `/repos/${fullName}/keys`, {
+    method: "POST",
+    body: JSON.stringify({ title, key, read_only: true }),
+  });
+  return k.id;
+}
+
+/** Creates a push webhook on the repo (Netlify's hook URL) so pushes trigger builds. */
+export async function addWebhook(token: string, fullName: string, url: string, events: string[]) {
+  const h = await gh<{ id: number }>(token, `/repos/${fullName}/hooks`, {
+    method: "POST",
+    body: JSON.stringify({ name: "web", active: true, events, config: { url, content_type: "json", insecure_ssl: "0" } }),
+  });
+  return h.id;
+}

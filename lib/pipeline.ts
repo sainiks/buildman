@@ -15,8 +15,11 @@ export interface Step {
   detail?: string;
 }
 
+export type Host = "vercel" | "netlify";
+
 export interface Options {
   name: string;
+  host: Host;
   isPrivate: boolean;
   deploy: boolean;
   createDb: boolean;
@@ -255,13 +258,54 @@ export async function ship(
     setStep("db", { state: "done", detail: `${supabase.ref}` });
   }
 
-  // 6. Vercel ----------------------------------------------------------------------------------
+  // 6. Host (Vercel or Netlify) ---------------------------------------------------------------
   if (!opts.deploy) {
     setStep("vercel", { state: "skipped", detail: "Turned off" });
     setStep("deploy", { state: "skipped" });
     return;
   }
+  const hostName = opts.host === "netlify" ? "Netlify" : "Vercel";
+  const poll = async (id: string) => {
+    const deadline = Date.now() + 10 * 60_000;
+    for (;;) {
+      await sleep(4000);
+      const s = await api<{ state: string; liveUrl?: string; inspectorUrl?: string; errors: string[] }>(
+        `pipeline/${opts.host}/status?id=${id}&projectId=${project.id}`,
+      );
+      if (s.inspectorUrl) addResult({ inspectorUrl: s.inspectorUrl });
+      if (s.state === "READY") {
+        addResult({ liveUrl: s.liveUrl });
+        setStep("deploy", { state: "done", detail: "Live" });
+        return;
+      }
+      if (s.state === "ERROR" || s.state === "CANCELED") {
+        throw new Error(`${hostName} build ${s.state.toLowerCase()}.${s.errors.length ? `\n${s.errors.join("\n")}` : ""}`);
+      }
+      if (Date.now() > deadline) throw new Error("Deployment took longer than 10 minutes.");
+      setStep("deploy", { detail: s.state === "BUILDING" ? "Building…" : "Queued" });
+    }
+  };
+
   setStep("vercel", { state: "running" });
+  if (opts.host === "netlify") {
+    const site = await api<{ id: string; name: string; envCount: number; hookNote?: string | null }>("pipeline/netlify/site", {
+      projectId: project.id,
+      name: opts.name,
+      framework: plan.framework,
+      envVars,
+      declaredEnv: plan.declaredEnv,
+      dbPass: supabase?.dbPass ?? null,
+      isPrivate: opts.isPrivate,
+    });
+    if (site.hookNote) addResult({}, site.hookNote);
+    setStep("vercel", { state: "done", detail: `${site.name} · ${site.envCount} env vars` });
+
+    setStep("deploy", { state: "running", detail: "Queued" });
+    const deploy = await api<{ id: string }>("pipeline/netlify/deploy", { projectId: project.id });
+    await poll(deploy.id);
+    return;
+  }
+
   const vercelProject = await api<{ id: string; name: string; envCount: number }>("pipeline/vercel/project", {
     projectId: project.id,
     name: opts.name,
@@ -277,22 +321,5 @@ export async function ship(
     projectId: project.id,
   });
   addResult({ inspectorUrl: deployment.inspectorUrl });
-
-  const deadline = Date.now() + 10 * 60_000;
-  for (;;) {
-    await sleep(4000);
-    const s = await api<{ state: string; liveUrl?: string; inspectorUrl?: string; errors: string[] }>(
-      `pipeline/vercel/status?id=${deployment.id}&projectId=${project.id}`,
-    );
-    if (s.state === "READY") {
-      addResult({ liveUrl: s.liveUrl });
-      setStep("deploy", { state: "done", detail: "Live" });
-      return;
-    }
-    if (s.state === "ERROR" || s.state === "CANCELED") {
-      throw new Error(`Vercel build ${s.state.toLowerCase()}.${s.errors.length ? `\n${s.errors.join("\n")}` : ""}`);
-    }
-    if (Date.now() > deadline) throw new Error("Deployment took longer than 10 minutes.");
-    setStep("deploy", { detail: s.state === "BUILDING" ? "Building…" : "Queued" });
-  }
+  await poll(deployment.id);
 }

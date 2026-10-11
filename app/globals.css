@@ -284,3 +284,7 @@ button.primary, .btn.primary { transition: transform 0.2s, opacity 0.2s, box-sha
   .step.running .dot { animation: spin 3s linear infinite; box-shadow: none; }
   .tile:hover, .pcard:hover, .drop.over { transform: none; }
 }
+
+.seg { display: flex; gap: 6px; padding: 2px 0 6px 28px; flex-wrap: wrap; }
+.seg button { border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+.seg button.on { border-color: var(--teal); color: var(--ink); background: rgba(139, 123, 255, 0.14); }

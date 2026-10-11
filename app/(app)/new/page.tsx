@@ -9,7 +9,7 @@ export default async function NewProject() {
   const connected = new Set((await listConnections(uid)).map((c) => c.provider));
   return (
     <Ship
-      initial={{ github: connected.has("github"), vercel: connected.has("vercel"), supabase: connected.has("supabase") }}
+      initial={{ github: connected.has("github"), vercel: connected.has("vercel"), supabase: connected.has("supabase"), netlify: connected.has("netlify") }}
     />
   );
 }
