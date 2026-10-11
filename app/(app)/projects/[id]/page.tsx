@@ -9,7 +9,7 @@ import { RangeLinks, RouteTrack, StatTile, StatusChip } from "@/components/ui";
 import { appUrl } from "@/lib/config";
 import { db, ok, type ProjectRow } from "@/lib/db";
 import { parseRange } from "@/lib/format";
-import { requireUserPage } from "@/lib/session";
+import { requireUidPage } from "@/lib/session";
 import { snippetTag } from "@/lib/snippet";
 
 interface Named { name: string; visitors?: number; views?: number; count?: number }
@@ -32,23 +32,23 @@ export default async function ProjectPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ days?: string }>;
 }) {
-  const user = await requireUserPage();
+  const uid = await requireUidPage();
   const { id } = await params;
   const days = parseRange((await searchParams).days);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  const project = ok(
-    await db().from("projects").select("*").eq("id", id).eq("user_id", user.id).maybeSingle(),
-    "Load project",
-  ) as ProjectRow | null;
+  // Three independent queries in parallel. Ownership is still checked: if the project isn't this
+  // user's we 404 before anything from the other two is rendered.
+  const [projectRes, statsRes, lastRes] = await Promise.all([
+    db().from("projects").select("*").eq("id", id).eq("user_id", uid).maybeSingle(),
+    db().rpc("project_stats", { p_project: id, p_days: days }),
+    db().from("events").select("ts").eq("project_id", id).order("ts", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const project = ok(projectRes, "Load project") as ProjectRow | null;
   if (!project) notFound();
-
-  const stats = ok(await db().rpc("project_stats", { p_project: project.id, p_days: days }), "Load stats") as Stats;
+  const stats = ok(statsRes, "Load stats") as Stats;
+  const last = ok(lastRes, "Load last event") as { ts: string } | null;
   const t = stats.totals;
-  const last = ok(
-    await db().from("events").select("ts").eq("project_id", project.id).order("ts", { ascending: false }).limit(1).maybeSingle(),
-    "Load last event",
-  ) as { ts: string } | null;
   const tag = snippetTag(`${appUrl()}/t.js`, project.public_key);
   const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
   const country = (code: string) => {
@@ -122,7 +122,7 @@ export default async function ProjectPage({
       </section>
 
       <Suspense fallback={<section className="card"><p className="none">Loading Vercel, Supabase and GitHub stats…</p></section>}>
-        <PlatformPanel userId={user.id} project={project} />
+        <PlatformPanel userId={uid} project={project} />
       </Suspense>
 
       <section className="card" style={{ marginTop: 12 }}>

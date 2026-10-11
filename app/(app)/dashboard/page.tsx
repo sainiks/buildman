@@ -6,7 +6,7 @@ import { listConnections } from "@/lib/connections";
 import { db, ok, type ProjectRow } from "@/lib/db";
 import { compact, parseRange } from "@/lib/format";
 import { providerList } from "@/lib/providers";
-import { requireUserPage } from "@/lib/session";
+import { requireUidPage } from "@/lib/session";
 
 interface Totals {
   pageviews: number;
@@ -23,13 +23,13 @@ interface Overview {
 }
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const user = await requireUserPage();
+  const uid = await requireUidPage();
   const days = parseRange((await searchParams).days);
 
   const [overviewRes, projectRows, connections] = await Promise.all([
-    db().rpc("user_overview", { p_user: user.id, p_days: days }),
-    db().from("projects").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    listConnections(user.id),
+    db().rpc("user_overview", { p_user: uid, p_days: days }),
+    db().from("projects").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+    listConnections(uid),
   ]);
   const overview = ok(overviewRes, "Load dashboard") as Overview;
   const projects = ok(projectRows, "Load projects") as ProjectRow[];

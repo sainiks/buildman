@@ -2,7 +2,7 @@ import { DisconnectButton } from "@/components/Actions";
 import { listConnections } from "@/lib/connections";
 import { timeAgo } from "@/lib/format";
 import { providerList } from "@/lib/providers";
-import { requireUserPage } from "@/lib/session";
+import { requireUidPage } from "@/lib/session";
 
 export const metadata = { title: "Connections" };
 
@@ -11,9 +11,8 @@ export default async function Connections({
 }: {
   searchParams: Promise<{ connected?: string; error?: string; next?: string }>;
 }) {
-  const user = await requireUserPage();
-  const q = await searchParams;
-  const connections = await listConnections(user.id);
+  const uid = await requireUidPage();
+  const [q, connections] = await Promise.all([searchParams, listConnections(uid)]);
   const just = providerList.find((p) => p.id === q.connected);
   const next = q.next && /^https:\/\/([a-z0-9-]+\.)*vercel\.com\//i.test(q.next) ? q.next : null;
 
