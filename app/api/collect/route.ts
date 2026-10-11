@@ -22,7 +22,11 @@ const buckets = new Map<string, { n: number; reset: number }>();
 async function projectIdFor(key: string): Promise<string | null> {
   const hit = keyCache.get(key);
   if (hit && hit.exp > Date.now()) return hit.id;
-  const { data } = await db().from("projects").select("id").eq("public_key", key).maybeSingle();
+  const { data, error } = await db().from("projects").select("id").eq("public_key", key).maybeSingle();
+  if (error) {
+    console.error("[collect] project lookup failed:", error.message);
+    return null; // don't cache a failure
+  }
   const id = (data as { id: string } | null)?.id ?? null;
   if (keyCache.size > 2000) keyCache.clear();
   keyCache.set(key, { id, exp: Date.now() + 60_000 });
@@ -91,7 +95,7 @@ export async function POST(req: Request) {
     const width = typeof body.w === "number" ? body.w : null;
     const country = (req.headers.get("x-vercel-ip-country") ?? req.headers.get("cf-ipcountry") ?? "").toUpperCase();
 
-    await db().from("events").insert({
+    const { error } = await db().from("events").insert({
       project_id: projectId,
       type,
       name,
@@ -101,7 +105,9 @@ export async function POST(req: Request) {
       device: device(ua, width),
       visitor,
     });
-  } catch {
+    if (error) console.error("[collect] insert failed:", error.message);
+  } catch (e) {
+    console.error("[collect] error:", e instanceof Error ? e.message : e);
     // Never surface errors to a visitor's browser.
   }
   return quiet();

@@ -25,14 +25,33 @@ interface Target {
   where: string;
   /** Closing tag the snippet goes in front of. */
   anchor: RegExp;
+  /** Concrete paths to try when reading a repo directly (no file listing needed). */
+  paths: string[];
 }
 
 const TARGETS: Target[] = [
-  { match: /^(src\/)?app\/layout\.(tsx|jsx|js)$/, where: "Next.js app layout", anchor: /<\/body>/i },
-  { match: /^(src\/)?pages\/_document\.(tsx|jsx|js)$/, where: "Next.js document", anchor: /<\/Head>/ },
-  { match: /^index\.html$/, where: "index.html", anchor: /<\/head>/i },
-  { match: /^(public|src)\/index\.html$/, where: "index.html", anchor: /<\/head>/i },
+  { match: /^(src\/)?app\/layout\.(tsx|jsx|js)$/, where: "Next.js app layout", anchor: /<\/body>/i, paths: ["app/layout.tsx", "src/app/layout.tsx", "app/layout.jsx", "app/layout.js", "src/app/layout.jsx", "src/app/layout.js"] },
+  { match: /^(src\/)?pages\/_document\.(tsx|jsx|js)$/, where: "Next.js document", anchor: /<\/Head>/, paths: ["pages/_document.tsx", "pages/_document.jsx", "pages/_document.js", "src/pages/_document.tsx", "src/pages/_document.jsx", "src/pages/_document.js"] },
+  { match: /^index\.html$/, where: "index.html", anchor: /<\/head>/i, paths: ["index.html"] },
+  { match: /^(public|src)\/index\.html$/, where: "index.html", anchor: /<\/head>/i, paths: ["public/index.html", "src/index.html"] },
 ];
+
+/** Matches any Buildman/Gitman tracking tag for this key, whatever host it points at. */
+function staleTag(publicKey: string): RegExp {
+  return new RegExp(`<script[^>]*data-key=["']${publicKey}["'][^>]*>\\s*</script>\\n?`, "g");
+}
+
+/** Pure: returns the source with exactly one correct tag, or null when nothing needs changing / no anchor. */
+export function refreshTag(source: string, target: { anchor: RegExp }, scriptUrl: string, publicKey: string): string | null {
+  const tag = snippetTag(scriptUrl, publicKey);
+  const cleaned = source.replace(staleTag(publicKey), "");
+  const at = cleaned.search(target.anchor);
+  if (at === -1) return null;
+  const next = `${cleaned.slice(0, at)}${tag}\n${cleaned.slice(at)}`;
+  return next === source ? null : next;
+}
+
+export const SNIPPET_TARGETS = TARGETS;
 
 export async function installSnippet(input: SnippetInput): Promise<SnippetResult | null> {
   const tag = snippetTag(input.scriptUrl, input.publicKey);

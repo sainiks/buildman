@@ -175,3 +175,24 @@ export async function repoActivity(token: string, fullName: string): Promise<Rep
     })),
   };
 }
+
+/** Reads a text file from the repo's branch. Returns null when it doesn't exist. */
+export async function readRepoFile(token: string, fullName: string, path: string, branch: string) {
+  try {
+    const f = await gh<{ content: string; sha: string }>(
+      token,
+      `/repos/${fullName}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(branch)}`,
+    );
+    return { sha: f.sha, text: Buffer.from(f.content, "base64").toString("utf8") };
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+export async function writeRepoFile(token: string, fullName: string, path: string, branch: string, text: string, sha: string, message: string) {
+  await gh(token, `/repos/${fullName}/contents/${path.split("/").map(encodeURIComponent).join("/")}`, {
+    method: "PUT",
+    body: JSON.stringify({ message, content: Buffer.from(text, "utf8").toString("base64"), sha, branch }),
+  });
+}

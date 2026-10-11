@@ -76,3 +76,29 @@ export function DisconnectButton({ provider, name }: { provider: string; name: s
     </button>
   );
 }
+
+export function ReinstallTagButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setMsg(null);
+          const res = await fetch(`/api/projects/${id}/snippet`, { method: "POST" });
+          const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+          setMsg({ ok: res.ok, text: (res.ok ? data.message : data.error) ?? (res.ok ? "Done." : "Couldn't update the tag.") });
+          setBusy(false);
+          if (res.ok) router.refresh();
+        }}
+      >
+        {busy ? "Updating repo…" : "Reinstall tracking in repo"}
+      </button>
+      {msg && <p className="small" style={{ color: msg.ok ? "var(--ok, inherit)" : "var(--bad)" }}>{msg.text}</p>}
+    </div>
+  );
+}

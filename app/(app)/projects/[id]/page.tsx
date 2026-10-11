@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { CopyButton, RemoveProjectButton } from "@/components/Actions";
+import { CopyButton, ReinstallTagButton, RemoveProjectButton } from "@/components/Actions";
 import BarList from "@/components/charts/BarList";
 import TrafficChart, { type DailyPoint } from "@/components/charts/TrafficChart";
 import PlatformPanel from "@/components/PlatformPanel";
@@ -45,6 +45,10 @@ export default async function ProjectPage({
 
   const stats = ok(await db().rpc("project_stats", { p_project: project.id, p_days: days }), "Load stats") as Stats;
   const t = stats.totals;
+  const last = ok(
+    await db().from("events").select("ts").eq("project_id", project.id).order("ts", { ascending: false }).limit(1).maybeSingle(),
+    "Load last event",
+  ) as { ts: string } | null;
   const tag = snippetTag(`${appUrl()}/t.js`, project.public_key);
   const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
   const country = (code: string) => {
@@ -129,7 +133,20 @@ export default async function ProjectPage({
             : "Buildman couldn't find a safe place to add this itself. Paste it just before </head> (or </body>) on every page, then redeploy."}
         </p>
         <pre className="code">{tag}</pre>
-        <div style={{ marginTop: 10 }}><CopyButton text={tag} label="Copy line" /></div>
+        <p className="small" style={{ marginTop: 10 }}>
+          {last ? `Last visit received ${new Date(last.ts).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}.` : "No visits received yet."}
+        </p>
+        <div className="row" style={{ marginTop: 10, alignItems: "flex-start" }}>
+          <CopyButton text={tag} label="Copy line" />
+          {project.repo_full_name && <ReinstallTagButton id={project.id} />}
+        </div>
+        {!last && (
+          <ul className="sub small" style={{ marginTop: 12, paddingLeft: 18 }}>
+            <li>Open your live site in a normal tab. Browsers with Do Not Track on (Brave, Firefox private) are not counted.</li>
+            <li>Right-click → View Source on the live site and search for <code>t.js</code>. If it points to localhost, press Reinstall.</li>
+            <li>Ad blockers can hide tracking scripts. Try a private window with extensions off.</li>
+          </ul>
+        )}
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>

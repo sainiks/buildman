@@ -56,7 +56,7 @@ Replace `<APP_URL>` with your deployment URL (`http://localhost:3000` locally).
 Callback URL: `<APP_URL>/api/oauth/github/callback`. Buildman requests `repo read:user user:email`.
 
 **Vercel Integration**: Vercel → Team Settings → Integrations → Developer → Create.
-Redirect URL: `<APP_URL>/api/oauth/vercel/callback`. Grant read/write on **Projects**, **Deployments** and **Project Environment Variables**, read on **Teams** and **User**. Because Buildman sets environment variables that belong to the user (not to the integration), the *global* project env vars scope is the likely requirement; if env vars are rejected, check this first. Put the integration's slug (the last part of `vercel.com/integrations/<slug>`) in `VC_INTEGRATION_SLUG`.
+Redirect URL: `<APP_URL>/api/oauth/vercel/callback`. Grant read/write on **Projects**, **Deployments** and **Project Environment Variables**, read on **Teams** and **User**. Because Buildman sets environment variables that belong to the user (not to the integration), the *global* project env vars scope is the likely requirement; if env vars are rejected, check this first. Put the integration's slug (the last part of `vercel.com/integrations/<slug>`) in `VC_INTEGRATION_SLUG` (Vercel reserves the `VERCEL_` prefix, so these settings are `VC_INTEGRATION_SLUG`, `VC_CLIENT_ID` and `VC_CLIENT_SECRET`; the old `VERCEL_*` names still work locally).
 
 **Supabase OAuth App**: Supabase → Organization settings → OAuth Apps → Add application.
 Redirect URI: `<APP_URL>/api/oauth/supabase/callback`. Scopes are chosen when the app is created; enable the ones covering projects, database, organizations, analytics and API keys.
@@ -91,7 +91,7 @@ Import this repository into Vercel, add the same variables, and set `APP_URL` to
 ## What happens when a user ships a project
 
 1. **Read & detect (in the browser).** A zip is unpacked locally; a folder is read locally. Framework comes from `package.json`; a database is detected from `@supabase/*`, a `supabase/` folder, `SUPABASE_*` names in an example env file, or SQL schema files.
-2. **Never uploaded:** `node_modules`, `.git`, build output, caches, `.DS_Store`, key files (`*.pem`, `*.key`, `id_rsa*`), and local `.env*` files (except `*.example`/`*.sample`/`*.template`). Values from `.env`, `.env.local` and `.env.production` are sent to Vercel as encrypted environment variables instead; values pointing at `localhost`, and `VC_*`/`NODE_ENV`, are dropped.
+2. **Never uploaded:** `node_modules`, `.git`, build output, caches, `.DS_Store`, key files (`*.pem`, `*.key`, `id_rsa*`), and local `.env*` files (except `*.example`/`*.sample`/`*.template`). Values from `.env`, `.env.local` and `.env.production` are sent to Vercel as encrypted environment variables instead; values pointing at `localhost`, and `VERCEL_*`/`NODE_ENV`, are dropped.
 3. **Tracking tag (optional, on by default).** One `<script>` line is added to `index.html`, the Next.js app layout, or `pages/_document`. If no safe place is found the project page shows the line to paste in.
 4. **GitHub.** Repository created in the user's account, files pushed in size-bounded batches, one commit on the default branch. Name taken → `name-2`, `name-3`, and the user is told.
 5. **Supabase.** Created while files upload so provisioning overlaps. Migrations in `supabase/migrations/*.sql` run in filename order (else the first of `supabase/schema.sql`, `schema.sql`, `db/schema.sql`, `database/schema.sql`, `sql/schema.sql`). `seed.sql` is not run. The database password is shown once and never stored.
@@ -164,5 +164,6 @@ gh repo create buildman --public --source=. --push   # or create it on github.co
 
 `.gitignore` already excludes `.env*` (only `.env.example` is committed), `node_modules`, `.next` and zip files, so no secret is pushed. CI (`.github/workflows/ci.yml`) type-checks and builds on every push and pull request. Then import the repository on Vercel and add the variables from `.env.example` (see step 4 above).
 
+Optional: in the repo's **Settings → General → Social preview**, upload `public/social-preview.png` (1280×640) so links to the repository show the Buildman card.
 
 Created by [Kunal Saini](https://www.linkedin.com/in/kunal-saini-b392a0167/) ([@sainiks](https://github.com/sainiks)). MIT licensed.

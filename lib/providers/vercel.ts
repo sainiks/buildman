@@ -13,6 +13,12 @@ interface TokenResponse {
   error_description?: string;
 }
 
+// Vercel reserves every variable name starting with "VERCEL_" for itself, so on Vercel hosting these
+// settings are named VC_*. The old VERCEL_* names still work for local setups.
+const slug = () => process.env.VC_INTEGRATION_SLUG || process.env.VERCEL_INTEGRATION_SLUG;
+const clientId = () => process.env.VC_CLIENT_ID || process.env.VERCEL_CLIENT_ID;
+const clientSecret = () => process.env.VC_CLIENT_SECRET || process.env.VERCEL_CLIENT_SECRET;
+
 export const vercel: Provider = {
   id: "vercel",
   name: "Vercel",
@@ -20,10 +26,10 @@ export const vercel: Provider = {
   envVars: ["VC_INTEGRATION_SLUG", "VC_CLIENT_ID", "VC_CLIENT_SECRET"],
   usesPkce: false,
   configured: () =>
-    Boolean(process.env.VC_INTEGRATION_SLUG && process.env.VC_CLIENT_ID && process.env.VC_CLIENT_SECRET),
+    Boolean(slug() && clientId() && clientSecret()),
 
   authorizeUrl({ state }) {
-    const url = new URL(`https://vercel.com/integrations/${process.env.VC_INTEGRATION_SLUG}/new`);
+    const url = new URL(`https://vercel.com/integrations/${slug()}/new`);
     url.searchParams.set("state", state);
     return url.toString();
   },
@@ -33,8 +39,8 @@ export const vercel: Provider = {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.VC_CLIENT_ID ?? "",
-        client_secret: process.env.VC_CLIENT_SECRET ?? "",
+        client_id: clientId() ?? "",
+        client_secret: clientSecret() ?? "",
         code,
         redirect_uri: redirectUri,
       }),
