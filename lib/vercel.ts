@@ -83,7 +83,7 @@ interface DeploymentResponse {
 }
 
 export async function createDeployment(auth: VercelAuth, opts: { project: string; repoId: number; branch: string }) {
-  const d = await vc<DeploymentResponse>(auth, "/v13/deployments?forceNew=1", {
+  const d = await vc<DeploymentResponse>(auth, "/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1", {
     method: "POST",
     body: JSON.stringify({
       name: opts.project,
