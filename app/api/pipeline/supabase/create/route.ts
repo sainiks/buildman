@@ -11,6 +11,7 @@ export const POST = handle(async (req) => {
   const userId = await requireUserId();
   const b = (await req.json()) as { projectId?: string; name?: string; region?: string };
   const project = await ownProject(userId, b.projectId);
+  if (project.supabase_ref) return { ref: project.supabase_ref, dbPass: null, reused: true };
   const slug = slugify(String(b.name ?? ""));
   if (!slug) throw new HttpError(400, "Project name is empty.");
 

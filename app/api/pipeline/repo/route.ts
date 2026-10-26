@@ -1,6 +1,6 @@
 import { credentials } from "@/lib/connections";
 import { HttpError, handle } from "@/lib/env";
-import { createRepo } from "@/lib/github";
+import { createRepo, getRepo } from "@/lib/github";
 import { ownProject, updateProject } from "@/lib/projects";
 import { requireUserId } from "@/lib/session";
 import { slugify } from "@/lib/slug";
@@ -15,8 +15,8 @@ export const POST = handle(async (req) => {
   if (!slug) throw new HttpError(400, "Project name is empty.");
 
   const { token } = await credentials(userId, "github");
-  const repo = await createRepo(token, slug, b.isPrivate !== false);
-  await updateProject(userId, project.id, {
+  const repo = project.repo_full_name ? await getRepo(token, project.repo_full_name) : await createRepo(token, slug, b.isPrivate !== false);
+  if (!project.repo_full_name) await updateProject(userId, project.id, {
     repo_full_name: repo.fullName,
     repo_url: repo.htmlUrl,
     repo_id: repo.id,

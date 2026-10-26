@@ -79,6 +79,16 @@ export async function createRepo(token: string, base: string, isPrivate: boolean
   throw new HttpError(409, `Repo name "${base}" and its numbered variants are all taken. Pick another name.`);
 }
 
+/** Returns the current repo metadata so a failed shipment can reuse its saved repository. */
+export async function getRepo(token: string, fullName: string) {
+  const repo = await gh<RepoResponse>(token, `/repos/${fullName}`);
+  const parentSha = await waitForRef(token, repo.full_name, repo.default_branch);
+  return {
+    owner: repo.owner.login, repo: repo.name, fullName: repo.full_name, id: repo.id,
+    htmlUrl: repo.html_url, branch: repo.default_branch, parentSha, renamed: false,
+  };
+}
+
 export interface BatchFile {
   path: string;
   encoding: "utf8" | "base64";

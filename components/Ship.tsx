@@ -55,6 +55,7 @@ export default function Ship({ initial }: { initial: Connected }) {
   });
   const [steps, setSteps] = useState<Step[]>(initialSteps());
   const [result, setResult] = useState<Result>({ notes: [] });
+  const [resumeProjectId, setResumeProjectId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -205,6 +206,7 @@ export default function Ship({ initial }: { initial: Connected }) {
     setPlan(null);
     setSteps(initialSteps());
     setResult({ notes: [] });
+    setResumeProjectId(undefined);
     setError(null);
     setFinished(false);
     setShowPass(false);
@@ -233,7 +235,7 @@ export default function Ship({ initial }: { initial: Connected }) {
     };
 
     try {
-      await ship({ opts, entries: ingested.entries, plan, envVars }, setStep, addResult);
+      await ship({ opts, entries: ingested.entries, plan, envVars, projectId: resumeProjectId }, setStep, addResult, setResumeProjectId);
       setFinished(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -497,7 +499,8 @@ export default function Ship({ initial }: { initial: Connected }) {
           )}
 
           {!running && (
-            <button className="primary wide" onClick={reset}>{finished ? "Ship another project" : "Back"}</button>
+            error ? <button className="primary wide" onClick={() => { setStage("review"); setError(null); }}>Retry this project</button> :
+              <button className="primary wide" onClick={reset}>{finished ? "Ship another project" : "Back"}</button>
           )}
         </div>
       )}

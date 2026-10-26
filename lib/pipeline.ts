@@ -44,6 +44,7 @@ export interface Context {
   entries: Entry[];
   plan: Plan;
   envVars: Record<string, string>;
+  projectId?: string;
 }
 
 const MAX_FILE_BYTES = 3 * 1024 * 1024; // JSON + base64 must stay under the ~4.5 MB request cap
@@ -110,6 +111,7 @@ export async function ship(
   ctx: Context,
   setStep: (id: StepId, patch: Partial<Step>) => void,
   addResult: (patch: Partial<Result>, note?: string) => void,
+  onProjectId?: (id: string) => void,
 ): Promise<void> {
   const { opts, entries, plan, envVars } = ctx;
   const dbWanted = opts.createDb && plan.needsDb;
@@ -120,7 +122,10 @@ export async function ship(
   const project = await api<{ id: string; publicKey: string; scriptUrl: string }>("projects", {
     name: opts.name,
     framework: plan.framework,
+    projectId: ctx.projectId,
   });
+  ctx.projectId = project.id;
+  onProjectId?.(project.id);
   addResult({ projectId: project.id });
 
   const overrides = new Map<string, string>();

@@ -68,7 +68,7 @@ Redirect URI: `<APP_URL>/api/oauth/netlify/callback`. Put the client id and secr
 ### 3. Configure and run
 
 ```bash
-cp .env.example .env.local   # fill it in; the file explains every value
+cp .env.example .env.local                                             # fill it in; the file explains every value
 npm install
 npm run dev
 ```
@@ -76,7 +76,7 @@ npm run dev
 Generate the two secrets:
 
 ```bash
-openssl rand -base64 48                                          # SESSION_SECRET
+openssl rand -base64 48                                                       # SESSION_SECRET
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # ENCRYPTION_KEY
 ```
 
@@ -88,9 +88,39 @@ The `return` value is checked against an allow-list of our own paths (`lib/retur
 
 A provider whose variables are missing shows "isn't set up on this server yet" on the Connections page instead of failing, so you can enable them one at a time.
 
-### 4. Deploy Buildman itself
+### 4. Deploy Buildman itself to Vercel
 
-Import this repository into Vercel, add the same variables, and set `APP_URL` to the production URL. Update each of the three app registrations with the production redirect URLs.
+Vercel detects this Next.js app from `package.json`; no custom build command or `vercel.json` is needed. Import this repository into Vercel and keep the Root Directory as `.`. The committed `package-lock.json` makes Vercel use `npm ci` for reproducible installs.
+
+Before the first production deployment:
+
+1. Create a dedicated Supabase project for Buildman's own data. Run [`supabase/schema.sql`](supabase/schema.sql) in its SQL editor. If you plan to offer Netlify, also run [`supabase/migrations/002_netlify.sql`](supabase/migrations/002_netlify.sql). These are Buildman's tables, not the databases Buildman creates for users.
+2. In Vercel → **Project → Settings → Environment Variables**, add the required production values below. Keep secrets server-only: do not prefix them with `NEXT_PUBLIC_`.
+3. Set `APP_URL` to the canonical production origin, for example `https://buildman-eight.vercel.app`, with no trailing slash. Add the production callback URL shown below to each provider app registration. Preview deployments have different hostnames; use the production domain for OAuth callbacks unless you intentionally configure separate preview apps and callback URLs.
+4. Deploy, then check the public landing page and sign-in. Provider cards show as unavailable until their optional credentials are configured.
+
+Required for the app to run:
+
+| Vercel variable | Value |
+|---|---|
+| `APP_URL` | Canonical production URL, with no trailing slash |
+| `SESSION_SECRET` | Output of `openssl rand -base64 48` |
+| `ENCRYPTION_KEY` | Output of `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`; keep the same value permanently or stored tokens become unreadable |
+| `GITMAN_SUPABASE_URL` | URL of Buildman's own Supabase project |
+| `GITMAN_SUPABASE_SERVICE_KEY` | Service role key for that project; server only |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Buildman's GitHub OAuth App credentials; required for sign-in |
+
+Add these provider credentials to enable the corresponding user connection:
+
+| Provider | Vercel variables | Production callback URL |
+|---|---|---|
+| Vercel | `VC_INTEGRATION_SLUG`, `VC_CLIENT_ID`, `VC_CLIENT_SECRET` | `${APP_URL}/api/oauth/vercel/callback` |
+| Supabase | `SUPABASE_OAUTH_CLIENT_ID`, `SUPABASE_OAUTH_CLIENT_SECRET` | `${APP_URL}/api/oauth/supabase/callback` |
+| Netlify | `NETLIFY_CLIENT_ID`, `NETLIFY_CLIENT_SECRET` | `${APP_URL}/api/oauth/netlify/callback` |
+
+`VERCEL_*` names are reserved by Vercel, so use the `VC_*` names above for Buildman's Vercel integration settings. `SUPABASE_REGION` is optional and defaults to `ap-south-1`. After changing production variables, redeploy so the functions receive the new values. Never commit `.env.local` or copy provider secrets into client-side variables.
+
+Vercel functions use the route-level `maxDuration` settings in the pipeline handlers. If your Vercel plan does not allow the configured duration, raise the plan limit or lower those route values before relying on long provider provisioning operations.
 
 ## What happens when a user ships a project
 
@@ -163,7 +193,7 @@ A service is one file implementing `Provider` from [`lib/providers/types.ts`](li
 git init -b main
 git add .
 git commit -m "Initial commit"
-gh repo create buildman --public --source=. --push   # or create it on github.com and add the remote
+gh repo create buildman --public --source=. --push             # or create it on github.com and add the remote
 ```
 
 `.gitignore` already excludes `.env*` (only `.env.example` is committed), `node_modules`, `.next` and zip files, so no secret is pushed. CI (`.github/workflows/ci.yml`) type-checks and builds on every push and pull request. Then import the repository on Vercel and add the variables from `.env.example` (see step 4 above).

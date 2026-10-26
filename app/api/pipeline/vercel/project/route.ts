@@ -21,6 +21,7 @@ export const POST = handle(async (req) => {
   };
   const project = await ownProject(userId, b.projectId);
   const name = slugify(String(b.name ?? ""));
+  if (project.vercel_project_id) return { id: project.vercel_project_id, name: project.vercel_project_name ?? name, envCount: 0 };
   if (!name || !project.repo_full_name) throw new HttpError(400, "Create the repository first.");
 
   // Values from the user's local .env first; the freshly created database overrides matching names.

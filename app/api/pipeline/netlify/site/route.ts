@@ -25,6 +25,7 @@ export const POST = handle(async (req) => {
   };
   const project = await ownProject(userId, b.projectId);
   const name = slugify(String(b.name ?? ""));
+  if (project.netlify_site_id) return { id: project.netlify_site_id, name: project.netlify_site_name ?? name, envCount: 0, hookNote: null };
   if (!name || !project.repo_full_name || !project.repo_id || !project.branch) throw new HttpError(400, "Create the repository first.");
 
   const env: Record<string, string> = { ...(b.envVars ?? {}) };
